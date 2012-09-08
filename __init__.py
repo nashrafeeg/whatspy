@@ -4,8 +4,6 @@
 class Globals():
 	SERVER = 's.whatsapp.net'
 	HOST = 'bin-short.whatsapp.net'
-	PORT = '5222'
-	RCV_BUFF_SZE = 1024
 	DIGEST_URI = 'xmpp/s.whatsapp.net'
 	REALM = 's.whatsapp.net'
 	QOP = 'auth'
