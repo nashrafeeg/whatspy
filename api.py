@@ -2,11 +2,12 @@ import socket
 import uuid
 import struct
 import md5
+from debug_toolbar.panels.template import self
 
 
 class Communicate():
 	def __init__(self):
-		self.SOCKET
+		self.SOCKET = None
 		self.SERVER = 's.whatsapp.net'
 		self.HOST = 'bin-short.whatsapp.net'
 		self.PORT = '5222'
@@ -24,8 +25,8 @@ class Communicate():
 		self.LOGIN_DATA = "WA"+"\x00\x04\x00\x19\xf8\x05\x01\xa0\x8a\x84\xfc\x11"+"iPhone-2.6.9-5222" 
 		self.LOGIN_DATA = LOGIN_DATA +"""\x00\x08\xf8\x02\x96\xf8\x01\xf8\x01\x7e\x00\x07\xf8
 									\x05\x0f\x5a\x2a\xbd\xa7"""
-		self.NUMBER
-		self.PASSWORD
+		self.NUMBER = None
+		self.PASSWORD = None
 		
 	def setup_credential(self, user, IMEI):
 		self.NUMBER = user
@@ -190,5 +191,104 @@ class Communicate():
 		password = md5.md5(password).hexdigest()
 		Response = 'username=%s,realm=%s,nonce=%s,cnonce=%s,nc=%s,qop=%s,digest-uri=%s,response=%s,charset=utf-8' % (self.NUMBER, self.REALM, nonce, cnonce, _NC, self.QOP, self.DIGEST_URI, password)	
 		return Response
+	def _hex(self, int):
+		x = "%X" % int
+		if len(x) % 2 == 0:
+			x = "%X" % int
+		else: 
+			x = "0%X" % int
+			
+		return x
+	
+	def _isShort(self, txt):
+		if len(txt)<256:
+			return True
+		else:
+			return False  
+
+	def Message(self, msgid, to, txt):
+		long_txt_bool = self._isShort(txt)
+		txt_length = (self._hex(len(txt))).encode('hex');
+		to_length = chr(len(unicode(to,"UTF-8")))
+		msgid_length = chr(len(msgid))
+		content = "\xF8\x08\x5D\xA0\xFA\xFC"+to_length
+		content =content + to
+		content =content+ "\x8A\xA2\x1B\x43\xFC"+msgid_length
+		content =content + msgid
+		content =content + "\xF8\x02\xF8\x04\xBA\xBD\x4F\xF8\x01\xF8\x01\x8C\xF8\x02\x16"
+		if long_txt_bool:
+			content =content + "\xFD\x00"+txt_length
+		else: 
+			content =content + "\xFC"+txt_length
+		content =content+ txt
+		total_length = hex2str(self._hex(len(content)))
+		if len(total_length) == '1':
+			total_length = "\x00"+total_length				
+		msg =""
+		msg =msg + total_length
+		msg =msg + content
+		print msg
+		stream =self.send(msg)
+		self.read()
+		self.read()
+		self.read()
+		
+	def sendImage(msgid,to,path,size,link,b64thumb):
+		thumb_length = (self._hex(len(b64thumb))).encode('hex')
+		to_length = chr(len(unicode(to,"UTF-8")))
+		msgid_length = chr(len(msgid))
+		path_length = chr(len(path))
+		size_length = chr(len(size))		# in bytes
+		link_length = chr(len(link))
+		content = "\xF8\x08\x5D\xA0\xFA\xFC"+to_length
+		content += to
+		content += "\x8A\xA2\x1B\x43\xFC"+msgid_length
+		content += msgid
+		content += "\xF8\x02\xF8\x04\xBA\xBD\x4F\xF8\x01\xF8\x01\x8C\xF8\x0C\x5C\xBD\xB0\xA2\x44\xFC\x04\x66\x69\x6C\x65\xFC"+path_length
+		content += path
+		content += "\xFC\x04\x73\x69\x7A\x65\xFC"+size_length
+		content += size
+		content += "\xA5\xFC"+link_length
+		content += link
+		content += "\xFD\x00"+thumb_length
+		content += b64thumb;
+		total_length = (self._hex(len(content))).encode('hex')
+		msg =""
+		msg += total_length
+		msg += content;
+		print msg
+		stream = self.send(msg)
+		self.read()
+	
+	def Subscribe(mobile):
+		mob_len = chr(len(unicode(mobile,"UTF-8")))
+		content = "\xF8\x05\x74\xA2\x98\xA0\xFA\xFC"+mob_len
+		content += mobile
+		content += "\x8A"
+		length = len(content)
+		total_length = chr(length)
+		request = "\x00"
+		request += total_length
+		request += content
+		stream = self.send(request);
+		self.read();
+
+
+	def RequestLastSeen(mobile):
+		mob_len = chr(len(unicode(mobile,"UTF-8")))
+		content = "\xF8\x08\x48\x43\xFC\x01\x37\xA2\x3A\xA0\xFA\xFC"+mob_len
+		content += mobile
+		content += "\x8A\xF8\x01\xF8\x03\x7B\xBD\x4C"
+		length = len(content)
+		total_length = chr(length)
+		request = "\x00"
+		request += total_length
+		request += content
+		stream = self.send(request)
+		self.read()
+	
+
+		
+
 		
 		
